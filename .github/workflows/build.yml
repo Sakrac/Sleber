@@ -1,0 +1,90 @@
+name: Build release artifacts
+
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: write
+
+jobs:
+  build-windows:
+    name: Build Windows x64
+    runs-on: windows-2022
+
+    steps:
+      - name: Check out release source
+        uses: actions/checkout@v4
+
+      - name: Configure
+        run: cmake --preset msvc-x64-release
+
+      - name: Build
+        run: cmake --build --preset build-msvc-x64-release
+
+      - name: Package
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path package | Out-Null
+          Copy-Item build/msvc-x64-release/Release/Sleber.exe package/
+          Copy-Item README.TXT package/
+          Compress-Archive -Path package/* -DestinationPath sleber-windows-x64.zip
+
+
+      - name: Upload Windows artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: sleber-windows-x64
+          path: sleber-windows-x64.zip
+
+  build-linux:
+    name: Build Linux x64
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out release source
+        uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes libgtk-3-dev ninja-build
+
+      - name: Configure
+        run: cmake -S . -B build/linux-release -G Ninja -DCMAKE_BUILD_TYPE=Release
+
+      - name: Build
+        run: cmake --build build/linux-release
+
+      - name: Package
+        run: |
+          mkdir -p package
+          cp build/linux-release/Sleber package/
+          cp README.TXT package/
+          tar -czf sleber-linux-x64.tar.gz -C package Sleber README.TXT
+
+      - name: Upload Linux artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: sleber-linux-x64
+          path: sleber-linux-x64.tar.gz
+
+  publish:
+    name: Publish release assets
+    needs: [build-windows, build-linux]
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out release source
+        uses: actions/checkout@v4
+
+      - name: Download build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          merge-multiple: true
+          path: artifacts
+
+      - name: Upload assets to release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release upload "${{ github.event.release.tag_name }}" artifacts/* --clobber

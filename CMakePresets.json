@@ -1,0 +1,114 @@
+{
+    "version": 6,
+    "cmakeMinimumRequired": {
+        "major": 3,
+        "minor": 21,
+        "patch": 0
+    },
+    "configurePresets": [
+        {
+            "name": "msvc-x64-debug",
+            "displayName": "MSVC x64 Debug",
+            "description": "Configure with Visual Studio 2022 for 64-bit",
+            "generator": "Visual Studio 17 2022",
+            "binaryDir": "${sourceDir}/build/msvc-x64-debug",
+            "architecture": "x64",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Debug"
+            }
+        },
+        {
+            "name": "msvc-x86-debug",
+            "displayName": "MSVC x86 Debug",
+            "description": "Configure with Visual Studio 2022 for 32-bit",
+            "generator": "Visual Studio 17 2022",
+            "binaryDir": "${sourceDir}/build/msvc-x86-debug",
+            "architecture": "Win32",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Debug"
+            }
+        },
+        {
+            "name": "msvc-x64-release",
+            "displayName": "MSVC x64 Release",
+            "description": "Configure with Visual Studio 2022 for 64-bit",
+            "generator": "Visual Studio 17 2022",
+            "binaryDir": "${sourceDir}/build/msvc-x64-release",
+            "architecture": "x64",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Release"
+            }
+        },
+        {
+            "name": "msvc-x86-release",
+            "displayName": "MSVC x86 Release",
+            "description": "Configure with Visual Studio 2022 for 32-bit",
+            "generator": "Visual Studio 17 2022",
+            "binaryDir": "${sourceDir}/build/msvc-x86-release",
+            "architecture": "Win32",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Release"
+            }
+        },
+        {
+            "name": "linux-clang-release",
+            "displayName": "Linux Clang Release",
+            "description": "Configure with Clang for Linux release builds",
+            "generator": "Ninja",
+            "binaryDir": "${sourceDir}/build/linux-clang",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Release",
+                "CMAKE_C_COMPILER": "clang"
+            }
+        },
+        {
+            "name": "linux-clang-debug",
+            "displayName": "Linux Clang Debug",
+            "description": "Configure with Clang for Linux debug builds",
+            "generator": "Ninja",
+            "binaryDir": "${sourceDir}/build/linux-clang-debug",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Debug",
+                "CMAKE_C_COMPILER": "clang"
+            }
+        }
+    ],
+    "buildPresets": [
+        {
+            "name": "build-msvc-x64-debug",
+            "displayName": "Build MSVC x64 Debug",
+            "configurePreset": "msvc-x64-debug",
+            "configuration": "Debug"
+        },
+        {
+            "name": "build-msvc-x86-debug",
+            "displayName": "Build MSVC x86 Debug",
+            "configurePreset": "msvc-x86-debug",
+            "configuration": "Debug"
+        },
+        {
+            "name": "build-msvc-x64-release",
+            "displayName": "Build MSVC x64 Release",
+            "configurePreset": "msvc-x64-release",
+            "configuration": "Release"
+        },
+        {
+            "name": "build-msvc-x86-release",
+            "displayName": "Build MSVC x86 Release",
+            "configurePreset": "msvc-x86-release",
+            "configuration": "Release"
+        },
+        {
+            "name": "build-linux-clang-release",
+            "displayName": "Build Linux Clang Release",
+            "configurePreset": "linux-clang-release",
+            "configuration": "Release"
+        },
+        {
+            "name": "build-linux-clang-debug",
+            "displayName": "Build Linux Clang Debug",
+            "configurePreset": "linux-clang-debug",
+            "configuration": "Debug"
+        }
+    ]
+}

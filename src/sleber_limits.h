@@ -1,0 +1,7 @@
+#ifndef SLEBER_LIMITS_H
+#define SLEBER_LIMITS_H
+
+#define MAX_CANVAS_WIDTH 32766
+#define MAX_CANVAS_HEIGHT 32766
+
+#endif
