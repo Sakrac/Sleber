@@ -318,7 +318,7 @@ static void BrushToClipboard(Sleber* app, HWND hwnd) {
 }
 
 static bool ClipboardDibToBrush(Sleber* app) {
-	HGLOBAL mem = (HGLOBAL)GetClipboardData(CF_DIB);
+		HGLOBAL mem = (HGLOBAL)GetClipboardData(CF_DIB);
 	if (!mem) {
 		return false;
 	}
@@ -1550,7 +1550,7 @@ static LRESULT CALLBACK MainWndProc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM l
 						L"Ctrl+Z / Ctrl+Shift+Z: undo / redo a drawing step\n"
 						L"Ctrl+U / Ctrl+Shift+U: undo / redo one frame's edit\n"
 						L"Ctrl+I: import image\n",
-						L"About slebeR pixel editor", MB_OK | MB_ICONINFORMATION);
+						L"About Sleber pixel editor", MB_OK | MB_ICONINFORMATION);
 					return 0;
 
 				case IDM_MODE_CHAR:
@@ -1745,6 +1745,8 @@ int WINAPI WinMain(_In_ HINSTANCE instance, _In_opt_ HINSTANCE prev_instance, _I
 	wc.cbSize = sizeof(wc);
 	wc.lpfnWndProc = MainWndProc;
 	wc.hInstance = instance;
+	wc.hIcon = LoadIconW(instance, L"IDI_ICON1");
+	wc.hIconSm = LoadIconW(instance, L"IDI_ICON1");
 	wc.hCursor = LoadCursorW(NULL, IDC_ARROW);
 	wc.hbrBackground = (HBRUSH)(COLOR_WINDOW + 1);
 	wc.lpszClassName = class_name;
@@ -1755,7 +1757,7 @@ int WINAPI WinMain(_In_ HINSTANCE instance, _In_opt_ HINSTANCE prev_instance, _I
 	AdjustWindowRect(&rect, WS_OVERLAPPEDWINDOW, TRUE);
 
 	app->gui->window = CreateWindowExW(
-		0, class_name, L"slebeR Pixel Editor", WS_OVERLAPPEDWINDOW | WS_CLIPCHILDREN,
+		0, class_name, L"Sleber Pixel Editor", WS_OVERLAPPEDWINDOW | WS_CLIPCHILDREN,
 		CW_USEDEFAULT, CW_USEDEFAULT, rect.right - rect.left, rect.bottom - rect.top,
 		NULL, NULL, instance, app);
 

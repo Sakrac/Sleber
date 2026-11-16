@@ -57,7 +57,8 @@ set( SOURCES
 
 if(WIN32)
     set(PLATFORM_SOURCE src/platform_windows.c)
-    add_executable(Sleber WIN32 ${SOURCES} ${PLATFORM_SOURCE})
+    set(PLATFORM_RESOURCE src/sleber.rc)
+    add_executable(Sleber WIN32 ${SOURCES} ${PLATFORM_SOURCE} ${PLATFORM_RESOURCE})
     target_compile_definitions(Sleber PRIVATE UNICODE _UNICODE)
     target_link_libraries(Sleber PRIVATE
         comdlg32
@@ -75,10 +76,15 @@ elseif(CMAKE_SYSTEM_NAME STREQUAL "Linux")
     pkg_check_modules(GTK3 REQUIRED gtk+-3.0)
 
     add_executable(Sleber ${SOURCES} ${PLATFORM_SOURCE})
+    configure_file(src/sleber.png ${CMAKE_CURRENT_BINARY_DIR}/sleber.png COPYONLY)
 
     target_include_directories(Sleber PRIVATE
         ${GTK3_INCLUDE_DIRS}
         src
+    )
+
+    target_compile_definitions(Sleber PRIVATE
+        SLEBER_ICON_PATH="${CMAKE_CURRENT_BINARY_DIR}/sleber.png"
     )
 
     target_compile_options(Sleber PRIVATE ${GTK3_CFLAGS_OTHER})

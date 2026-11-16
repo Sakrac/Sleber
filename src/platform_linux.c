@@ -1460,6 +1460,11 @@ int main(int argc, char **argv) {
     int step = PixelSize(app);
     app->gui->window = gtk_window_new(GTK_WINDOW_TOPLEVEL);
     gtk_window_set_title(GTK_WINDOW(app->gui->window), "Sleber Bitmap Editor");
+    GError *icon_error = NULL;
+    if (!gtk_window_set_icon_from_file(GTK_WINDOW(app->gui->window), SLEBER_ICON_PATH, &icon_error)) {
+        fprintf(stderr, "Failed to load window icon: %s\n", icon_error->message);
+        g_error_free(icon_error);
+    }
     gtk_window_set_default_size(GTK_WINDOW(app->gui->window), app->draw_window_width, app->draw_window_height);
     g_signal_connect(app->gui->window, "destroy", G_CALLBACK(gtk_main_quit), NULL);
     g_signal_connect(app->gui->window, "delete-event", G_CALLBACK(OnMainWindowDeleteEvent), app);
