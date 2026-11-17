@@ -26,6 +26,15 @@ Ctrl+Z / Ctrl+Shift+Z: undo / redo a drawing step
 Ctrl+U / Ctrl+Shift+U: undo / redo one frame's edit
 Ctrl+I: import image
 
+Issues and bugs
+
+Please report bugs here:
+
+https://github.com/Sakrac/Sleber/issues
+
+Releases are posted at
+
+https://github.com/Sakrac/Sleber/releases
 
 This program was originally intended to be a basic Linux port of
 Pixcen by John Hammarberg.

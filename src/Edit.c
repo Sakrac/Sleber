@@ -1226,6 +1226,41 @@ static void SetPixelAtCharMC(Sleber* app, int x, int y, uint8_t value) {
 	}
 }
 
+static void UpdateCharMixedMC(Sleber* app, int x, int y) {
+	const int cx = x & ~7, cy = y & ~7;
+	const int ex = min(cx + 8, app->width), ey = min(cy + 8, app->height);
+	const int stride = app->width;
+	uint8_t* char_pixel = app->pixels + cy * stride;
+
+	uint8_t first_non_bg_color = 0xff;
+	uint8_t bg_color = app->shared_colors[0];
+	bool single_color = true;
+	for(int py=cy; py<ey && single_color; ++py) {
+		for(int px=cx; px<ex; px++) {
+			if (char_pixel[px] == bg_color) { continue; }
+			if (char_pixel[px] > 8) { single_color = false; break; }
+			if (char_pixel[px] == first_non_bg_color) { continue; }
+			if (first_non_bg_color == 0xff) { first_non_bg_color = char_pixel[px]; continue; }
+			if (first_non_bg_color != char_pixel[px]) { single_color = false; break; }
+		}
+		char_pixel += stride;
+	}
+	if (single_color) {
+		char_pixel = app->pixels + cy * stride;
+		uint8_t* type_pixel = app->pixels_info + cy * stride;
+		for (int py = cy; py < ey; ++py) {
+			for (int px = cx; px < ex; px++) {
+				if (char_pixel[px] == bg_color) { type_pixel[px] = GPX_PIXEL_BG; }
+				else { type_pixel[px] = GPX_PIXEL_FG; }
+			}
+			type_pixel += stride;
+			char_pixel += stride;
+		}
+	} else {
+		MakeCharMixedMC(app, x, y);
+	}
+}
+
 static void SetPixelAtCharMixed(Sleber* app, int x, int y, uint8_t value) {
 	// app->width <= 0xffff, check draw position
 	if (x < 0 || x >= app->width || y < 0 || y >= app->height) { return; }
@@ -1249,20 +1284,20 @@ static void SetPixelAtCharMixed(Sleber* app, int x, int y, uint8_t value) {
 		if (value == bg) {
 			// record undo previous color / type
 			SetPixelAtMC(app->pixels, app->pixels_info, app->width, x, y, value, GPX_PIXEL_BG);
-			MakeCharMixedMC(app, x, y);
+			UpdateCharMixedMC(app, x, y);
 		} else if (value == app->shared_colors[1]) {
 			// record undo previous color / type
 			SetPixelAtMC(app->pixels, app->pixels_info, app->width, x, y, value, GPX_PIXEL_MC0);
-			MakeCharMixedMC(app, x, y);
+			UpdateCharMixedMC(app, x, y);
 		} else if (value == app->shared_colors[2]) {
 			// record undo previous color / type
 			SetPixelAtMC(app->pixels, app->pixels_info, app->width, x, y, value, GPX_PIXEL_MC1);
-			MakeCharMixedMC(app, x, y);
+			UpdateCharMixedMC(app, x, y);
 		} else if (value < 8) {
 			// record undo either fg pixel or whole char
 			SetPixelAtMC(app->pixels, app->pixels_info, app->width, x, y, value, GPX_PIXEL_FG);
 			ChangeTypedColor(app, value, GPX_PIXEL_FG, x & ~7, y & ~7, 8, 8);
-			MakeCharMixedMC(app, x, y);
+			UpdateCharMixedMC(app, x, y);
 		}
 	}
 }
@@ -1794,6 +1829,13 @@ void PaintAt(Sleber* app, int x, int y, int use_background) {
 	LockMutex(&app->canvas_mutex);
 	PaintAtLocked(app, x, y, use_background);
 	UnlockMutex(&app->canvas_mutex);
+}
+
+uint8_t GetColorAt(Sleber* app, int x, int y) {
+	if (x < 0 || y < 0 || x >= app->width || y >= app->height) {
+		return 0xff;
+	}
+	return app->pixels[y * app->width + x];
 }
 
 static void PaintLineLocked(Sleber* app, int x0, int y0, int x1, int y1, int use_background) {

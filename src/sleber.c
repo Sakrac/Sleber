@@ -253,11 +253,11 @@ static void DrawPalette(Sleber* app, UIPixel* pixels, int width, int height,
 	UIPixel bc = ToUIPixel(IsBright(bg) ? 0 : 1);
 
 	int select_wid = cell_wid - 2;
-	UIPixel* pixel_fg = pixels +
-		(fg & 7) * cell_hgt * width + (fg >> 3) * cell_wid + width + 1;
-	UIPixel* pixel_fl = pixel_fg + (select_wid - 1) * width;
 
 	if (dirty_colors & (uint16_t)(1u << fg)) {
+		UIPixel* pixel_fg = pixels +
+			(fg & 7) * cell_hgt * width + (fg >> 3) * cell_wid + width + 1;
+		UIPixel* pixel_fl = pixel_fg + (select_wid - 1) * width;
 		for (int y = 0; y < select_wid; ++y) {
 			pixel_fg[y] = fc;
 			pixel_fl[y] = fc;
@@ -266,10 +266,9 @@ static void DrawPalette(Sleber* app, UIPixel* pixels, int width, int height,
 		}
 	}
 
-	UIPixel* pixel_bg = pixels +
-		(bg & 7) * cell_hgt * width + (bg >> 3) * cell_wid + width + 1;
-
 	if (dirty_colors & (uint16_t)(1u << bg)) {
+		UIPixel* pixel_bg = pixels +
+			(bg & 7) * cell_hgt * width + (bg >> 3) * cell_wid + width + 1;
 		for (int y = 0; y < select_wid; ++y) {
 			pixel_bg[y * (1 + width)] = bc;
 			pixel_bg[y * (width - 1) + select_wid - 1] = bc;
@@ -782,8 +781,6 @@ static ThreadReturn RedrawThreadFunc(ThreadArg arg) {
 		bool redraw_color_picker;
 		bool redraw_palette;
 		bool redraw_canvas;
-		uint16_t palette_dirty_colors;
-		bool palette_dirty_preview;
 
 		LockMutex(&app->redraw_mutex);
 		while (!g_redraw_shutdown && !app->color_picker_redraw && !app->palette_redraw && !app->canvas_redraw) {
@@ -796,8 +793,6 @@ static ThreadReturn RedrawThreadFunc(ThreadArg arg) {
 		redraw_color_picker = app->color_picker_redraw;
 		redraw_palette = app->palette_redraw;
 		redraw_canvas = app->canvas_redraw;
-		palette_dirty_colors = app->palette_dirty_colors;
-		palette_dirty_preview = app->palette_dirty_preview;
 		app->color_picker_redraw = 0;
 		app->palette_redraw = 0;
 		app->palette_dirty_colors = 0;
@@ -830,19 +825,13 @@ static ThreadReturn RedrawThreadFunc(ThreadArg arg) {
 
 			WindowContext window_dc = GetPaletteContext(app);
 			BitmapType bitmap = g_redraw_bitmap_palette_work;
-			int bitmap_width = vizWidth;
-#ifdef _WIN32
-			bitmap_width = (vizWidth + 3) & ~3UL;
-#endif
-			const bool bitmap_needs_full_redraw =
-				!BitmapValid(bitmap) || bitmap.width != bitmap_width || bitmap.height != vizHeight;
 			void* pixels = CheckBitmapForRedraw(app, &g_redraw_bitmap_palette_work, &bitmap, window_dc, vizWidth, vizHeight);
 
 			if (pixels && BitmapValid(bitmap)) {
 				// just draw straight into pixels!
 
-				uint16_t dirty_colors = bitmap_needs_full_redraw ? UINT16_MAX : palette_dirty_colors;
-				bool dirty_preview = bitmap_needs_full_redraw || palette_dirty_preview;
+				uint16_t dirty_colors = UINT16_MAX;
+				bool dirty_preview = true;
 				LockMutex(&app->canvas_mutex);
 				DrawPalette(app, pixels, vizWidth, vizHeight, dirty_colors, dirty_preview);
 				UnlockMutex(&app->canvas_mutex);
@@ -1452,6 +1441,14 @@ gpx_data* MakeGPXFile(Sleber *app)
 
 
 /* ---- UI calls */
+// set foreground or background from canvas pixel
+void PickColorAt(Sleber* app, I32Point p, bool bg) {
+	uint8_t c = app->border_color;
+	if (p.x >= 0 && p.y >= 0 && p.x < app->width && p.y < app->height) {
+		c = GetColorAt(app, p.x, p.y);
+	}
+	if (bg) { SetBackgroundColor(app, c); } else { SetForegroundColor(app, c); }
+}
 
 // assign a color to a pixel
 void UpdateMouseDown(Sleber* app, I32Point pw, int right) {
@@ -1469,6 +1466,8 @@ void UpdateMouseDown(Sleber* app, I32Point pw, int right) {
 			app->select_w = (max(min(p.x, app->width), 0) - app->select_x) & (app->wide_pixels ? ~1 : ~0);
 			app->select_h = max(min(p.y, app->height), 0) - app->select_y;
 		}
+	} else if (app->modifier_keys & MODIFIER_KEY_SHIFT) {
+		return;
 	} else if (app->paste_mode == PASTE_MODE_OVERWRITE || app->paste_mode == PASTE_MODE_SKIP_BG_COLOR) {
 		PasteBrush(app, p);
 	} else if (app->paste_mode == PASTE_MODE_PASTED) {
@@ -1678,6 +1677,7 @@ Sleber* AppNew(void) {
 	app->offset_x = STARTUP_HORIZONTAL_BORDER * pixel_size;
 	app->offset_y = STARTUP_VERTICAL_BORDER * pixel_size;
 	app->paste_mode = PASTE_MODE_NONE;
+	app->modifier_keys = MODIFIER_KEY_NONE;
 	app->foreground_color = 1;
 	app->background_color = 0;
 	app->border_color = 14;

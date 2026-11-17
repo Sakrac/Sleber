@@ -105,6 +105,19 @@ enum RedrawSurface {
 	REDRAW_SURFACE_COLOR_PICKER = 4
 };
 
+enum ModifierKeys {
+	MODIFIER_KEY_NONE = 0,
+	MODIFIER_KEY_LEFT_SHIFT = 1,
+	MODIFIER_KEY_RIGHT_SHIFT = 2,
+	MODIFIER_KEY_SHIFT = 3, // combination of left and right shift
+	MODIFIER_KEY_LEFT_CTRL = 4,
+	MODIFIER_KEY_RIGHT_CTRL = 8,
+	MODIFIER_KEY_CTRL = 12, // combination of left and right ctrl
+	MODIFIER_KEY_LEFT_ALT = 16,
+	MODIFIER_KEY_RIGHT_ALT = 32,
+	MODIFIER_KEY_ALT = 48, // combination of left and right alt
+};
+
 typedef struct Sleber {
 	MutexType canvas_mutex;
 	MutexType redraw_mutex;
@@ -187,6 +200,7 @@ typedef struct Sleber {
 	uint8_t selection_mode;
 
 	uint8_t paste_mode;
+	uint8_t modifier_keys; // combination of ModifierKeys enum values
 
 	bool color_picker_visible;
 	bool draw_pixel_info;
@@ -273,5 +287,5 @@ struct gpx_data;
 typedef struct gpx_data gpx_data;
 bool IsGpxSupportedMode(uint8_t mode);
 gpx_data* MakeGPXFile(Sleber* app);
-
+void PickColorAt(Sleber* app, I32Point p, bool bg);
 #endif

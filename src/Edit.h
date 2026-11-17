@@ -33,5 +33,7 @@ struct CellCols GetSpriteColsAt(Sleber* app, int x, int y);
 struct CellColsMC GetCellColsMCAt(Sleber* app, int x, int y);
 struct CellColsMC GetSpriteColsMCAt(Sleber* app, int x, int y);
 
+uint8_t GetColorAt(Sleber* app, int x, int y);
+
 void ShutdownAppUndo(Sleber* app);
 #endif //_EDIT_H_

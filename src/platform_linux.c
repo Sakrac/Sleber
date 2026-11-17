@@ -396,6 +396,18 @@ static gboolean OnDraw(GtkWidget *widget, cairo_t *cr, gpointer user_data) {
 static gboolean OnButtonPress(GtkWidget *widget, GdkEventButton *event, gpointer user_data) {
     (void)widget;
     Sleber *app = (Sleber *)user_data;
+    if ((app->modifier_keys & MODIFIER_KEY_SHIFT) || (event->state & GDK_SHIFT_MASK)) {
+        int step = PixelSize(app);
+        I32Point p = SnapToGrid(app, (I32Point) {
+            ((int)event->x - app->offset_x) / step,
+            ((int)event->y - app->offset_y) / step
+        });
+        if (event->button == GDK_BUTTON_PRIMARY || event->button == GDK_BUTTON_SECONDARY) {
+            PickColorAt(app, p, event->button == GDK_BUTTON_SECONDARY);
+            gtk_widget_grab_focus(app->gui->drawing_area);
+            return TRUE;
+        }
+    }
     if (event->button == GDK_BUTTON_PRIMARY) {
         UpdateMouseDown(app, (I32Point){ (int)event->x, (int)event->y }, FALSE);
         gtk_widget_grab_focus(app->gui->drawing_area);
@@ -496,6 +508,28 @@ static gboolean OnScroll(GtkWidget *widget, GdkEventScroll *event, gpointer user
 static gboolean OnKeyPress(GtkWidget *widget, GdkEventKey *event, gpointer user_data) {
     (void)widget;
     Sleber *app = (Sleber *)user_data;
+    switch (event->keyval) {
+        case GDK_KEY_Shift_L:
+            app->modifier_keys |= MODIFIER_KEY_LEFT_SHIFT;
+            break;
+        case GDK_KEY_Shift_R:
+            app->modifier_keys |= MODIFIER_KEY_RIGHT_SHIFT;
+            break;
+        case GDK_KEY_Control_L:
+            app->modifier_keys |= MODIFIER_KEY_LEFT_CTRL;
+            break;
+        case GDK_KEY_Control_R:
+            app->modifier_keys |= MODIFIER_KEY_RIGHT_CTRL;
+            break;
+        case GDK_KEY_Alt_L:
+            app->modifier_keys |= MODIFIER_KEY_LEFT_ALT;
+            break;
+        case GDK_KEY_Alt_R:
+            app->modifier_keys |= MODIFIER_KEY_RIGHT_ALT;
+            break;
+        default:
+            break;
+    }
     guint keyval = gdk_keyval_to_upper(event->keyval);
 
     if (!(event->state & GDK_CONTROL_MASK) && keyval >= GDK_KEY_0 && keyval <= GDK_KEY_9) {
@@ -580,7 +614,7 @@ static gboolean OnKeyPress(GtkWidget *widget, GdkEventKey *event, gpointer user_
             return FALSE;
         case GDK_KEY_S:
             if (event->state & GDK_CONTROL_MASK) {
-                if (!(event->state & GDK_SHIFT_MASK) || !SaveCurrentFile(app)) {
+                if ((event->state & GDK_SHIFT_MASK) || !SaveCurrentFile(app)) {
                     OnSaveSBXActivate(NULL, app);
                 }
                 return TRUE;
@@ -640,6 +674,28 @@ static gboolean OnKeyPress(GtkWidget *widget, GdkEventKey *event, gpointer user_
 static gboolean OnKeyRelease(GtkWidget *widget, GdkEventKey *event, gpointer user_data) {
     (void)widget;
     Sleber *app = (Sleber *)user_data;
+    switch (event->keyval) {
+        case GDK_KEY_Shift_L:
+            app->modifier_keys &= (uint8_t)~MODIFIER_KEY_LEFT_SHIFT;
+            break;
+        case GDK_KEY_Shift_R:
+            app->modifier_keys &= (uint8_t)~MODIFIER_KEY_RIGHT_SHIFT;
+            break;
+        case GDK_KEY_Control_L:
+            app->modifier_keys &= (uint8_t)~MODIFIER_KEY_LEFT_CTRL;
+            break;
+        case GDK_KEY_Control_R:
+            app->modifier_keys &= (uint8_t)~MODIFIER_KEY_RIGHT_CTRL;
+            break;
+        case GDK_KEY_Alt_L:
+            app->modifier_keys &= (uint8_t)~MODIFIER_KEY_LEFT_ALT;
+            break;
+        case GDK_KEY_Alt_R:
+            app->modifier_keys &= (uint8_t)~MODIFIER_KEY_RIGHT_ALT;
+            break;
+        default:
+            break;
+    }
     guint keyval = gdk_keyval_to_upper(event->keyval);
     if (keyval == GDK_KEY_T) {
         app->draw_pixel_info = false;

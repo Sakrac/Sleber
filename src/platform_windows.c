@@ -1152,6 +1152,11 @@ static LRESULT CALLBACK MainWndProc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM l
 			int step = PixelSize(app);
 			I32Point p = SnapToGrid(app, (I32Point) { (px - app->offset_x) / step, (py - app->offset_y) / step });
 
+			if (app->modifier_keys & MODIFIER_KEY_SHIFT) {
+				PickColorAt(app, p, msg == WM_RBUTTONDOWN);
+				return 0;
+			}
+
 			UpdateMouseDown(app, (I32Point) { px, py }, msg == WM_RBUTTONDOWN);
 			app->dragging = msg == WM_RBUTTONDOWN ? MOUSE_BUTTON_RIGHT : MOUSE_BUTTON_LEFT;
 			app->drag_last_x = p.x;
@@ -1297,6 +1302,15 @@ static LRESULT CALLBACK MainWndProc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM l
 						RequestRedraw(app);
 					}
 					break;
+				case VK_SHIFT:
+					app->modifier_keys |= MODIFIER_KEY_SHIFT;
+					break;
+				case VK_CONTROL:
+					app->modifier_keys |= MODIFIER_KEY_CTRL;
+					break;
+				case VK_MENU:
+					app->modifier_keys |= MODIFIER_KEY_ALT;
+					break;
 				case 'A':
 					if (GetKeyState(VK_CONTROL) & 0x8000) {
 						SelectAll(app);
@@ -1340,7 +1354,7 @@ static LRESULT CALLBACK MainWndProc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM l
 					break;
 				case 'S':
 					if (GetKeyState(VK_CONTROL) & 0x8000) {
-						if (!(GetKeyState(VK_SHIFT) & 0x8000) || !SaveCurrentFile(app)) {
+						if ((GetKeyState(VK_SHIFT) & 0x8000) || !SaveCurrentFile(app)) {
 							char* path = RunCanvasFileDialog(app, TRUE, NULL);
 							if (path) {
 								SaveImage(app, path);
@@ -1406,6 +1420,15 @@ static LRESULT CALLBACK MainWndProc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM l
 				break;
 			}
 			switch (wparam) {
+				case VK_SHIFT:
+					app->modifier_keys &= ~MODIFIER_KEY_SHIFT;
+					break;
+				case VK_CONTROL:
+					app->modifier_keys &= ~MODIFIER_KEY_CTRL;
+					break;
+				case VK_MENU:
+					app->modifier_keys &= ~MODIFIER_KEY_ALT;
+					break;
 				case 'T':
 					app->draw_pixel_info = false;
 					RequestRedraw(app);
