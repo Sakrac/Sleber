@@ -227,7 +227,11 @@ static uint32_t CountTwoColors(uint8_t *pixels, uint8_t bg, uint8_t fg, int w, i
 
 static double DitherLevelMultiplier[] = { 0.0, 1.0 / 192.0, 1.0 / 64.0, 1.0 / 48.0 };
 
-static void ConvertToTwoColors(uint8_t *pixels, uint8_t *type, const uint8_t *rgb, uint8_t bg, uint8_t fg, int width, int height, int trg_stride, int rgb_channels, int rgb_stride, int dither_level) {
+static double GetDitherMultiplier(int dither_level) {
+	return DitherLevelMultiplier[Clamp(dither_level, 0, sizeof(DitherLevelMultiplier) / sizeof(DitherLevelMultiplier[0]) - 1)];
+}
+
+static void ConvertToTwoColors(uint8_t* pixels, uint8_t* type, const uint8_t* rgb, uint8_t bg, uint8_t fg, int width, int height, int trg_stride, int rgb_channels, int rgb_stride, int dither_level) {
 	DebugLog("Converting image chunk to two colors: %dx%d, trg_stride: %d, rgb_channels: %d, rgb_stride: %d", width, height, trg_stride, rgb_channels, rgb_stride);
 	ColorLab lab_c_bg = ColorToLab(bg);
 	ColorLab lab_c_fg = ColorToLab(fg);
@@ -239,7 +243,7 @@ static void ConvertToTwoColors(uint8_t *pixels, uint8_t *type, const uint8_t *rg
 		lab_delta.b = -lab_delta.b;
 	}
 
-	double dither_multiplier = DitherLevelMultiplier[dither_level];
+	double dither_multiplier = GetDitherMultiplier(dither_level);
 
 	for(int y = 0; y < height; ++y) {
 		for(int x = 0; x < width; ++x) {
@@ -270,7 +274,7 @@ static void ConvertToFourColors(uint8_t* pixels, uint8_t* type, const uint8_t* r
 	uint8_t PInd[4] = { bg, fg, mc1, mc2 };
 	static const uint8_t TInd[4] = { GPX_PIXEL_BG, GPX_PIXEL_FG, GPX_PIXEL_MC0, GPX_PIXEL_MC1 };
 
-	double dither_multiplier = DitherLevelMultiplier[dither_level];
+	double dither_multiplier = GetDitherMultiplier(dither_level);
 
 	for (int y = 0; y < height; ++y) {
 		for (int x = 0; x < width; x+=2) {
@@ -330,7 +334,7 @@ static bool CheckTwoOrFourColors(const uint8_t* rgb, uint8_t bg, uint8_t fg, uin
 	uint8_t PInd[4] = { bg, fg, mc1, mc2 };
 	bool used_colors[4] = { false, false, false, false };
 
-	double dither_multiplier = DitherLevelMultiplier[dither_level];
+	double dither_multiplier = GetDitherMultiplier(dither_level);
 
 	int num_used_not_bg = 0;
 	for (int y = 0; y < height; ++y) {

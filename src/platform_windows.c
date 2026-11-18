@@ -67,14 +67,68 @@ struct PlatformGui {
 	HWND status_label;
 	HWND palette_window;
 	HWND color_picker_window;
-
-	/* Off-screen canvas buffer, avoids flicker from painting directly on screen. */
-//	HDC backbuffer_dc;
-//	HBITMAP backbuffer;
-//	LONG_PTR palette_style;
-//	int backbuffer_w;
-//	int backbuffer_h;
 };
+
+
+static wchar_t kSettingsKey[] = L"Software\\Rebels\\Sleber";
+
+static bool WriteDword(HKEY key, const wchar_t* name, DWORD value) {
+	return RegSetValueExW( key, name, 0, REG_DWORD, (const BYTE*)&value, sizeof(value)) == ERROR_SUCCESS;
+}
+
+static bool ReadDword(HKEY key, const wchar_t* name, DWORD *value) {
+	DWORD type = 0;
+	DWORD size = sizeof(*value);
+	bool succeeded = RegQueryValueExW(key, name, NULL, &type, (BYTE*)value, &size) == ERROR_SUCCESS;
+	return succeeded && type == REG_DWORD && size == sizeof(*value);
+}
+
+
+
+// Call on startup. Missing or invalid values keep the defaults in s.
+void LoadSettings(Sleber *app) {
+	HKEY key = NULL;
+	if (RegOpenKeyExW(HKEY_CURRENT_USER, kSettingsKey, 0,
+		KEY_QUERY_VALUE, &key) != ERROR_SUCCESS)
+		return;
+
+	DWORD value = 0;
+
+	if (ReadDword(key, L"snap_to_grid", &value))
+		app->snap_to_grid = (value != 0);
+
+	if (ReadDword(key, L"import_image_dither", &value) && value <= 255)
+		app->import_image_dither = (uint8_t)(value);
+
+	RegCloseKey(key);
+}
+
+bool SaveSnapToGridSetting(bool snap_to_grid) {
+	HKEY key = NULL;
+	if (RegCreateKeyExW(HKEY_CURRENT_USER, kSettingsKey, 0, NULL,
+		REG_OPTION_NON_VOLATILE, KEY_SET_VALUE, NULL,
+		&key, NULL) != ERROR_SUCCESS)
+		return false;
+
+	const bool ok = WriteDword(key, L"snap_to_grid", snap_to_grid ? 1 : 0);
+
+	RegCloseKey(key);
+	return ok;
+}
+
+bool SaveImportDitherSetting(uint8_t import_image_dither) {
+	HKEY key = NULL;
+	if (RegCreateKeyExW(HKEY_CURRENT_USER, kSettingsKey, 0, NULL,
+		REG_OPTION_NON_VOLATILE, KEY_SET_VALUE, NULL,
+		&key, NULL) != ERROR_SUCCESS)
+		return false;
+
+	const bool ok = WriteDword(key, L"import_image_dither", import_image_dither ? 1 : 0);
+
+	RegCloseKey(key);
+	return ok;
+}
+
 
 static void SetWindowsPalette(RGBQUAD* pal) {
 	const uint8_t* palc64 = GetC64Palette();
@@ -1611,6 +1665,7 @@ static LRESULT CALLBACK MainWndProc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM l
 					return 0;
 				case IDM_SNAP_TO_GRID:
 					app->snap_to_grid = !app->snap_to_grid;
+					SaveSnapToGridSetting(app->snap_to_grid);
 					CheckMenuItem(GetMenu(hwnd), IDM_SNAP_TO_GRID,
 						MF_BYCOMMAND | (app->snap_to_grid ? MF_CHECKED : MF_UNCHECKED));
 					return 0;
@@ -1625,6 +1680,7 @@ static LRESULT CALLBACK MainWndProc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM l
 					app->import_image_dither = (uint8_t)(LOWORD(wparam) - IDM_DITHER_OFF);
 					CheckMenuRadioItem(GetMenu(hwnd), IDM_DITHER_OFF, IDM_DITHER_HIGH,
 						LOWORD(wparam), MF_BYCOMMAND);
+					SaveImportDitherSetting(app->import_image_dither);
 					return 0;
 				default:
 					break;
@@ -1641,7 +1697,8 @@ static LRESULT CALLBACK MainWndProc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM l
 	return DefWindowProcW(hwnd, msg, wparam, lparam);
 }
 
-static void BuildMenuBar(HWND window) {
+static void BuildMenuBar(Sleber *app) {
+	HWND window = app->gui->window;
 	HMENU menubar = CreateMenu();
 	HMENU file_menu = CreatePopupMenu();
 
@@ -1671,13 +1728,18 @@ static void BuildMenuBar(HWND window) {
 
 	AppendMenu(edit_menu, MF_POPUP, (UINT_PTR)mode_menu, L"Mode");
 	AppendMenuW(edit_menu, MF_STRING, IDM_SIZE_NEW, L"Size/New");
-	AppendMenuW(edit_menu, MF_STRING, IDM_SNAP_TO_GRID, L"Snap to Grid");
+	AppendMenuW(edit_menu, MF_STRING | (app->snap_to_grid ? MF_CHECKED : MF_UNCHECKED),
+		IDM_SNAP_TO_GRID, L"Snap to Grid");
 	AppendMenuW(edit_menu, MF_STRING | MF_CHECKED, IDM_DOCK_PALETTE, L"Dock Palette");
 	HMENU dither_menu = CreatePopupMenu();
 	AppendMenuW(dither_menu, MF_STRING, IDM_DITHER_OFF, L"Off");
 	AppendMenuW(dither_menu, MF_STRING, IDM_DITHER_LOW, L"Low");
-	AppendMenuW(dither_menu, MF_STRING | MF_CHECKED, IDM_DITHER_MEDIUM, L"Medium");
+	AppendMenuW(dither_menu, MF_STRING, IDM_DITHER_MEDIUM, L"Medium");
 	AppendMenuW(dither_menu, MF_STRING, IDM_DITHER_HIGH, L"High");
+	if (app->import_image_dither <= IMPORT_IMAGE_DITHER_HIGH) {
+		CheckMenuRadioItem(dither_menu, IDM_DITHER_OFF, IDM_DITHER_HIGH,
+			IDM_DITHER_OFF + app->import_image_dither, MF_BYCOMMAND);
+	}
 	AppendMenuW(edit_menu, MF_POPUP, (UINT_PTR)dither_menu, L"Import Image Dither");
 	AppendMenuW(menubar, MF_POPUP, (UINT_PTR)edit_menu, L"Edit");
 
@@ -1758,6 +1820,8 @@ int WINAPI WinMain(_In_ HINSTANCE instance, _In_opt_ HINSTANCE prev_instance, _I
 		return 1;
 	}
 
+	LoadSettings(app);
+
 	InitBitmapPalette();
 	SetScreenMode(app, SCREEN_MODE_BITMAP);
 	StartRedrawThread(app);
@@ -1790,7 +1854,7 @@ int WINAPI WinMain(_In_ HINSTANCE instance, _In_opt_ HINSTANCE prev_instance, _I
 		return 1;
 	}
 
-	BuildMenuBar(app->gui->window);
+	BuildMenuBar(app);
 
 	RECT client;
 	GetClientRect(app->gui->window, &client);

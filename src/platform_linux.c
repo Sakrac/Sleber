@@ -1462,6 +1462,7 @@ static void BuildMenuBar(Sleber *app, GtkWidget *container) {
     gtk_menu_shell_append(GTK_MENU_SHELL(edit_menu), size_new_item);
     gtk_menu_shell_append(GTK_MENU_SHELL(edit_menu), mode_menu_item);
     GtkWidget *snap_to_grid_item = gtk_check_menu_item_new_with_label("Snap to Grid");
+    gtk_check_menu_item_set_active(GTK_CHECK_MENU_ITEM(snap_to_grid_item), app->snap_to_grid);
     g_signal_connect(snap_to_grid_item, "toggled", G_CALLBACK(OnSnapToGridActivate), app);
     gtk_menu_shell_append(GTK_MENU_SHELL(edit_menu), snap_to_grid_item);
     app->gui->dock_palette_item = gtk_check_menu_item_new_with_label("Dock Palette");
@@ -1477,7 +1478,7 @@ static void BuildMenuBar(Sleber *app, GtkWidget *container) {
         dither_group = GTK_RADIO_MENU_ITEM(item);
         g_object_set_data(G_OBJECT(item), "dither", GUINT_TO_POINTER(i));
         g_signal_connect(item, "toggled", G_CALLBACK(OnDitherActivate), app);
-        if (i == IMPORT_IMAGE_DITHER_MEDIUM) {
+        if (i == app->import_image_dither) {
             gtk_check_menu_item_set_active(GTK_CHECK_MENU_ITEM(item), TRUE);
         }
         gtk_menu_shell_append(GTK_MENU_SHELL(dither_menu), item);
