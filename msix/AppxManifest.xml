@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Package
+  xmlns="http://schemas.microsoft.com/appx/manifest/foundation/windows10"
+  xmlns:uap="http://schemas.microsoft.com/appx/manifest/uap/windows10"
+  xmlns:uap10="http://schemas.microsoft.com/appx/manifest/uap/windows10/10"
+  xmlns:rescap="http://schemas.microsoft.com/appx/manifest/foundation/windows10/restrictedcapabilities">
+
+  <Identity
+    Name="SpaceMoguls.Sleber"
+    Publisher="CN=FB5EB715-A1AF-42FC-AE67-8AFF4A56DCD2"
+    Version="1.0.2.0"
+    ProcessorArchitecture="x64" />
+
+  <Properties>
+    <DisplayName>Sleber</DisplayName>
+    <PublisherDisplayName>Space Moguls</PublisherDisplayName>
+    <Description>A pixel editor for various Commodore 64 screen modes.</Description>
+    <Logo>Assets\Square150x150Logo.png</Logo>
+  </Properties>
+
+  <Resources>
+    <Resource Language="en-us" />
+  </Resources>
+
+  <Dependencies>
+    <TargetDeviceFamily
+      Name="Windows.Desktop"
+      MinVersion="10.0.19041.0"
+      MaxVersionTested="10.0.19045.0" />
+  </Dependencies>
+
+  <Capabilities>
+    <rescap:Capability Name="runFullTrust" />
+  </Capabilities>
+
+  <Applications>
+    <Application
+      Id="Sleber"
+      Executable="Sleber.exe"
+      uap10:RuntimeBehavior="packagedClassicApp"
+      uap10:TrustLevel="mediumIL">
+
+      <uap:VisualElements
+        DisplayName="Sleber"
+        Description="A pixel editor for various Commodore 64 screen modes."
+        Square150x150Logo="Assets\Square150x150Logo.png"
+        Square44x44Logo="Assets\Square44x44Logo.png"
+        BackgroundColor="transparent" />
+    </Application>
+  </Applications>
+</Package>
