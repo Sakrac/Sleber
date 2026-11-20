@@ -153,12 +153,15 @@ BitmapType CreateUIBitmap(int width, int height, void** pixels, WindowContext co
 	char bmimem[sizeof(BITMAPINFOHEADER) + sizeof(RGBQUAD) * 256];
 	BITMAPINFO* bmi = (BITMAPINFO*)bmimem;
 	BITMAPINFOHEADER* bih = &bmi->bmiHeader;
+	memset(bmi, 0, sizeof(bmimem));
 	bih->biSize = sizeof(BITMAPINFOHEADER);
 	bih->biWidth = width & (~3UL);
 	bih->biHeight = -height;
 	bih->biPlanes = 1;
 	bih->biBitCount = 8;
 	bih->biCompression = BI_RGB;
+	bih->biClrUsed = 256;
+	bih->biClrImportant = 256;
 
 	// Fill palette
 	SetWindowsPalette(bmi->bmiColors); // points into memory after the header

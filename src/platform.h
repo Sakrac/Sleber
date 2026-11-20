@@ -74,7 +74,7 @@ typedef struct { int32_t x, y; } I32Point;
 typedef struct { uint16_t x, y; } I16Vec2;
 typedef struct { uint16_t x, y, w, h; } Area;
 static inline I16Vec2 ToI16Vec2(int x, int y) { return (I16Vec2) { (uint16_t)x, (uint16_t)y }; }
-static inline Area ToArea(int x, int y, int w, int h) { return (Area) { (uint16_t)x, (uint16_t)y, (uint16_t)w, (uint16_t)h }; }
+static inline Area ToArea(int x, int y, int w, int h) { return (Area) { x>0 ? (uint16_t)x : 0, y > 0 ? (uint16_t)y : 0, (uint16_t)w, (uint16_t)h }; }
 
 FILE* OpenFileUTF8(const char* path_utf8, const char* mode);
 struct PlatformGui* CreateGuiData(void);

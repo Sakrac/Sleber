@@ -2059,7 +2059,7 @@ static void PasteBrushLocked(Sleber* app, I32Point in_point) {
 	const I32Point point = SnapToGrid(app, in_point);
 	const Area PasteBox = ClampArea(
 		SnapAreaToUnit(app->screen_mode, 
-		ToArea(max(point.x,0), max(point.y,0), max(point.x + app->brush_w,0), max(point.y + app->brush_h,0))),
+		ToArea(max(point.x,0), max(point.y,0), app->brush_w, app->brush_h)),
 		ToArea(0, 0, app->width, app->height));
 	if (PasteBox.w == 0 || PasteBox.h == 0) { return; }
 

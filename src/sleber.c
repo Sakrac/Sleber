@@ -331,13 +331,13 @@ static void DrawBrushInBitmap(Sleber* app, int step, int width, int height, UIPi
 	const int snap_x = app->snap_to_grid ? HorizontalUnit(app) : (app->wide_pixels ? 2 : 1);
 	const int snap_y = app->snap_to_grid ? VerticalUnit(app) : 1;
 
-	// mouse
+	// mouse canvas pixel * scale
 	const int mx = app->mouse_x * step;
 	const int my = app->mouse_y * step;
 
 	// window offset for drawing - this should match the draw area
-	const int x0 = SnapToUnit(mx + ox, step * snap_x);
-	const int y0 = SnapToUnit(my + oy, step * snap_y);
+	const int x0 = SnapToUnit(mx, step * snap_x) + ox;
+	const int y0 = SnapToUnit(my, step * snap_y) + oy;
 
 	// draw space
 	const int win_left = min(DrawArea.x, width);
@@ -507,6 +507,7 @@ static void DrawBitmap(Sleber* app, UIPixel* pixels, int width, int height, Area
 	int y1 = Clamp(app->offset_y + app->height * step, target_y, trgend_y);
 	int src_y = source_y;
 	for(int y = y0; y < y1; ++y) {
+		if ((src_y >> 16) >= app->height) { break; }
 		const uint8_t* src = p + (src_y >> 16) * app->width;
 		UIPixel* row = pixels + y * width;
 		int src_x = source_x;
