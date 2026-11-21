@@ -36,6 +36,8 @@ target_include_directories(stb SYSTEM PUBLIC
 )
 
 set( SOURCES
+    src/c64_data.h
+    src/c64_data.c
     src/convert.h
     src/convert.c
     src/Edit.c
