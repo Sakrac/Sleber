@@ -16,7 +16,7 @@ typedef struct ThreeColors {
 	uint8_t col0, col1, col2;
 } ThreeColors;
 
-static const uint8_t Dither8x8[8][8] = {
+static const int8_t Dither8x8[8][8] = {
 	{ 0, 48, 12, 60, 3, 51, 15, 63 },
 	{ 32, 16, 44, 28, 35, 19, 47, 31 },
 	{ 8, 56, 4, 52, 11, 59, 7, 55 },
@@ -232,6 +232,13 @@ static double GetDitherMultiplier(int dither_level) {
 		 (int)(sizeof(DitherLevelMultiplier) / sizeof(DitherLevelMultiplier[0])) - 1)];
 }
 
+static const double MaxDitherShift = 0.49;//(15.0/16.0) * 0.5;
+
+static double GetDitherValue(int x, int y, double dither_multiplier) {
+	double value = dither_multiplier * (Dither8x8[y & 7][x & 7] - 32);
+	return value < -MaxDitherShift ? -MaxDitherShift : (value < MaxDitherShift ? value : MaxDitherShift);
+}
+
 static void ConvertToTwoColors(uint8_t* pixels, uint8_t* type, const uint8_t* rgb, uint8_t bg, uint8_t fg, int width, int height, int trg_stride, int rgb_channels, int rgb_stride, int dither_level) {
 	DebugLog("Converting image chunk to two colors: %dx%d, trg_stride: %d, rgb_channels: %d, rgb_stride: %d", width, height, trg_stride, rgb_channels, rgb_stride);
 	ColorLab lab_c_bg = ColorToLab(bg);
@@ -248,7 +255,7 @@ static void ConvertToTwoColors(uint8_t* pixels, uint8_t* type, const uint8_t* rg
 
 	for(int y = 0; y < height; ++y) {
 		for(int x = 0; x < width; ++x) {
-			double dither = ((int)Dither8x8[y & 7][x & 7] - 32) * dither_multiplier;
+			double dither = GetDitherValue(x, y, dither_multiplier);
 			uint8_t r = rgb[x * rgb_channels], g = rgb[x * rgb_channels + 1], b = rgb[x * rgb_channels + 2];
 			ColorLab lab_pixel = RGB8ToLab(r, g, b);
 			lab_pixel.L += lab_delta.L * dither;
@@ -299,7 +306,7 @@ static void ConvertToFourColors(uint8_t* pixels, uint8_t* type, const uint8_t* r
 					n1 = i;
 				}
 			}
-			double dither = ((int)Dither8x8[y & 7][((x>>1) + dithadd) & 7] - 32) * dither_multiplier;
+			double dither = GetDitherValue(((x>>1)&3) + dithadd, y, dither_multiplier);
 			ColorLab lab_delta = { Labs[n1].L - Labs[n0].L, Labs[n1].a - Labs[n0].a, Labs[n1].b - Labs[n0].b };
 			if (lab_delta.L < 0.0) {
 				lab_delta.L = -lab_delta.L;
@@ -360,7 +367,7 @@ static bool CheckTwoOrFourColors(const uint8_t* rgb, uint8_t bg, uint8_t fg, uin
 					n1 = i;
 				}
 			}
-			double dither = ((int)Dither8x8[y & 7][((x >> 1) + dithadd) & 7] - 32) * dither_multiplier;
+			double dither = GetDitherValue(((x>>1)&3) + dithadd, y, dither_multiplier);
 			ColorLab lab_delta = { Labs[n1].L - Labs[n0].L, Labs[n1].a - Labs[n0].a, Labs[n1].b - Labs[n0].b };
 			if (lab_delta.L < 0.0) {
 				lab_delta.L = -lab_delta.L;
