@@ -329,72 +329,45 @@ static void ConvertToFourColors(uint8_t* pixels, uint8_t* type, const uint8_t* r
 	}
 }
 
-static bool CheckTwoOrFourColors(const uint8_t* rgb, uint8_t bg, uint8_t fg, uint8_t mc1, uint8_t mc2, int width, int height, int rgb_channels, int rgb_stride, int dithadd, int dither_level) {
+static bool CheckTwoOrFourColors(const uint8_t* rgb, uint8_t bg, uint8_t fg, uint8_t mc1, uint8_t mc2, int width, int height, int rgb_channels, int rgb_stride) {
 	ColorLab Labs[4] = { ColorToLab(bg), ColorToLab(fg), ColorToLab(mc1), ColorToLab(mc2) };
-	uint8_t PInd[4] = { bg, fg, mc1, mc2 };
-	bool used_colors[4] = { false, false, false, false };
 
-	double dither_multiplier = GetDitherMultiplier(dither_level);
+	if (fg >= 8) return false; // if the foreground color is not a valid color, we can't use two colors
 
-	int num_used_not_bg = 0;
+	const ColorLab lab_c_bg = Labs[0];
+	const ColorLab lab_c_fg = Labs[1];
+
+	double two_col_err = 0, four_col_err = 0;
+
 	for (int y = 0; y < height; ++y) {
+		const uint8_t* row = rgb + y * rgb_stride * rgb_channels;
 		for (int x = 0; x < width; x++) {
-			const uint8_t* a = &rgb[x * rgb_channels], * b = a + rgb_channels;
+			const uint8_t* a = &row[x * rgb_channels];
 			ColorLab lab_pixel = RGB8ToLab(a[0], a[1], a[2]);
-			ColorLab lab_pixel2 = x == (width-1) ? lab_pixel : RGB8ToLab(b[0], b[1], b[2]);
-			lab_pixel.L = (lab_pixel.L + lab_pixel2.L) * 0.5;
-			lab_pixel.a = (lab_pixel.a + lab_pixel2.a) * 0.5;
-			lab_pixel.b = (lab_pixel.b + lab_pixel2.b) * 0.5;
-			uint8_t n0 = 0, n1 = 1;
-			uint32_t d0 = LabDistance(lab_pixel, Labs[0]), d1 = UINT32_MAX;
-			for (uint8_t i = 1; i < 4; ++i) {
-				uint32_t d = LabDistance(lab_pixel, Labs[i]);
-				if (d < d0) {
-					d1 = d0;
-					n1 = n0;
-					d0 = d;
-					n0 = i;
-				} else if (d < d1) {
-					d1 = d;
-					n1 = i;
-				}
-			}
-			double dither = ((int)Dither8x8[y & 7][((x >> 1) + dithadd) & 7] - 32) * dither_multiplier;
-			ColorLab lab_delta = { Labs[n1].L - Labs[n0].L, Labs[n1].a - Labs[n0].a, Labs[n1].b - Labs[n0].b };
-			if (lab_delta.L < 0.0) {
-				lab_delta.L = -lab_delta.L;
-				lab_delta.a = -lab_delta.a;
-				lab_delta.b = -lab_delta.b;
-			}
-			lab_pixel.L += lab_delta.L * dither;
-			lab_pixel.a += lab_delta.a * dither;
-			lab_pixel.b += lab_delta.b * dither;
-
-			uint32_t best = ~0U;
-			uint8_t best_index = 0;
-			for (uint8_t i = 0; i < 4; ++i) {
-				uint32_t d = LabDistance(lab_pixel, Labs[i]);
-				if (d < best) {
-					best = d;
-					best_index = i;
-				}
-			}
-			if (!used_colors[best_index]) {
-				used_colors[best_index] = true;
-				if (best_index) {
-					if (PInd[best_index] >= 8) {
-						return false;
-					}
-					++num_used_not_bg;
-					if(num_used_not_bg > 1) {
-						return false;
-					}
-				}
-			}
+			double d0 = LabDistance(lab_pixel, lab_c_bg);
+			double d1 = LabDistance(lab_pixel, lab_c_fg);
+			if (d0 < d1) { two_col_err += d0; }
+			else { two_col_err += d1; }
 		}
-		rgb += rgb_stride * rgb_channels;
 	}
-	return true;
+
+	for (int y = 0; y < height; ++y) {
+		const uint8_t* row = rgb + y * rgb_stride * rgb_channels;
+		for (int x = 0; x < width; x+=2) {
+			const uint8_t* a = &row[x * rgb_channels], *b = (x+1<width) ? (a + rgb_channels ) : a;
+			ColorLab lab_pixelA = RGB8ToLab(a[0], a[1], a[2]);
+			ColorLab lab_pixelB = RGB8ToLab(b[0], b[1], b[2]);
+			ColorLab lab_pixel = { (lab_pixelA.L + lab_pixelB.L) * 0.5, (lab_pixelA.a + lab_pixelB.a) * 0.5, (lab_pixelA.b + lab_pixelB.b) * 0.5 };
+			double d = 1e9;
+			for(uint8_t i = 0; i < 4; ++i) {
+				double dist = LabDistance(lab_pixel, Labs[i]);
+				if (dist < d) { d = dist; }
+			}
+			four_col_err += d * 2.0; // two pixels worth of error
+		}
+	}
+
+	return two_col_err < (four_col_err * 1.01); // allow some tolerance for two-color conversion to be considered better than four-color conversion
 }
 
 static bool FinishConversion(Sleber* app, uint8_t* pixels, uint8_t* types, int width, int height, uint8_t mode) {
@@ -534,7 +507,7 @@ static SleberImage ConvertAreaToCharMixed(const uint8_t* image, int image_width,
 			if( CheckTwoOrFourColors(
 				image + (image_width * cy + cx) * image_channels,
 				c3.col0, fg, c3.col1, c3.col2, cw, ch,
-				image_channels, image_width, (cx & 8) ? 4 : 0, dither_level)) {
+				image_channels, image_width)) {
 				ConvertToTwoColors(
 					pixels + cy * width + cx, types + cy * width + cx,
 					image + (image_width * cy + cx) * image_channels,
