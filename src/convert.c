@@ -228,7 +228,8 @@ static uint32_t CountTwoColors(uint8_t *pixels, uint8_t bg, uint8_t fg, int w, i
 static double DitherLevelMultiplier[] = { 0.0, 1.0 / 192.0, 1.0 / 64.0, 1.0 / 48.0 };
 
 static double GetDitherMultiplier(int dither_level) {
-	return DitherLevelMultiplier[Clamp(dither_level, 0, sizeof(DitherLevelMultiplier) / sizeof(DitherLevelMultiplier[0]) - 1)];
+	return DitherLevelMultiplier[Clamp(dither_level, 0,
+		 (int)(sizeof(DitherLevelMultiplier) / sizeof(DitherLevelMultiplier[0])) - 1)];
 }
 
 static void ConvertToTwoColors(uint8_t* pixels, uint8_t* type, const uint8_t* rgb, uint8_t bg, uint8_t fg, int width, int height, int trg_stride, int rgb_channels, int rgb_stride, int dither_level) {
