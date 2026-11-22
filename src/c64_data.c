@@ -32,6 +32,45 @@ CharColors C64CharColor(const uint8_t* pixels, const uint8_t* types, int stride)
 	return charColors;
 }
 
+int CountC64Chars(const uint8_t* types, int width, int height, int stride) {
+	int charsWide = width / 8;
+	int charsHigh = height / 8;
+	int numChars = charsWide * charsHigh;
+	C64Char *chars = (C64Char*)malloc(numChars * sizeof(C64Char));
+	if (!chars) { return 0; }
+	int uniqueChars = 0;
+	const uint8_t* t = types;
+	for(int y = 0; y < charsHigh; y++) {
+		for(int x = 0; x < charsWide; x++) {
+			const uint8_t *row = t;
+			C64Char current = { 0 };
+			for(int py=0; py<8; py++) {
+				uint8_t b = 0;
+				for(int px=0; px<8; px++) {
+					b |= (*row++ & 1) << (7 - px);
+				}
+				current.bytes[py] = b;
+				row += stride;
+			}
+			t += 8;
+			bool match = false;
+			for (int u = 0; u < uniqueChars; u++) {
+				if (current.unit == chars[u].unit) {
+					match = true;
+					break;
+				}
+			}
+			if (!match) {
+				chars[uniqueChars] = current;
+				++uniqueChars;
+			}
+		}
+		t += stride * 8 - charsWide * 8;
+	}
+	free(chars);
+	return uniqueChars;
+}
+
 C64CharData CreateC64SingleColorData(const uint8_t* types, int width, int height) {
 	int charsWide = width / 8;
 	int charsHigh = height / 8;
@@ -160,7 +199,6 @@ C64ExportData BuildC64MixedCharData(const uint8_t* pixels, const uint8_t* types,
 
 	int charsWide = width / 8;
 
-	// just count unique characters before allocating
 	int uniqueChars = 0;
 	for(int c = 0; c < data.numChars; c++) {
 		int match = uniqueChars;

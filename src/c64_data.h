@@ -18,4 +18,10 @@ typedef struct {
 	int charsHigh;
 } C64ExportData;
 
+// count unique chars for screen indexed modes
+int CountC64Chars(const uint8_t* types, int width, int height, int stride);
+
+// build the binary data for exporting
+C64ExportData CreateC64CharData(uint8_t mode, const uint8_t* pixels, const uint8_t* types, int width, int height);
+
 #endif // _C64_DATA_H
