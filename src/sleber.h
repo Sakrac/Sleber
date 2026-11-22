@@ -152,6 +152,7 @@ typedef struct Sleber {
     int offset_y;
 	int width;
 	int height;
+	int char_count;
 
 	int draw_window_width;
 	int draw_window_height;
@@ -194,6 +195,9 @@ typedef struct Sleber {
 	bool palette_dirty_preview;
 	uint8_t canvas_redraw;
 	uint8_t color_picker_redraw;
+	bool pixels_changed; // trigger recount etc.
+	bool recount_triggerd;
+	bool request_recount;
 
     uint8_t palette_docked;
 

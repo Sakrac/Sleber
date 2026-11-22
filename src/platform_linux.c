@@ -30,6 +30,7 @@ struct PlatformGui {
     GtkWidget *dock_palette_item;
     GtkWidget *color_picker_window;
     GtkWidget *color_picker_area;
+    guint recount_source_id;
 };
 
 static void OnOpenActivate(GtkMenuItem *menuitem, gpointer user_data);
@@ -259,6 +260,31 @@ void InvalidateColorPicker(Sleber *app) {
         return;
     }
     QueueWidgetDraw(app->gui->color_picker_area, (Area){0});
+}
+
+static gboolean OnRecountTimeout(gpointer user_data) {
+    Sleber *app = (Sleber *)user_data;
+    app->gui->recount_source_id = 0;
+    if (app->recount_triggerd) {
+        app->recount_triggerd = false;
+        RequestRecount(app);
+    }
+    return G_SOURCE_REMOVE;
+}
+
+void StartRecountCountdown(Sleber* app, int milliseconds) {
+    if (!app || !app->gui || app->gui->recount_source_id != 0) {
+        return;
+    }
+    app->gui->recount_source_id = g_timeout_add((guint)milliseconds, OnRecountTimeout, app);
+}
+
+void StopRecountCountdown(Sleber* app) {
+    if (!app || !app->gui || app->gui->recount_source_id == 0) {
+        return;
+    }
+    g_source_remove(app->gui->recount_source_id);
+    app->gui->recount_source_id = 0;
 }
 
 

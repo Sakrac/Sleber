@@ -405,6 +405,7 @@ static bool CheckAndAddUndoArea(Sleber* app, Area changeArea, bool addStop) {
 		if (undo_buffer) { *undo_buffer = UNDO_STOP; }
 	}
 	AddUndoArea(app, undoArea);
+	app->pixels_changed = true;
 #ifdef DEBUG
 	ValidateUndoCommands(app, false);
 #endif
@@ -1131,19 +1132,24 @@ static uint8_t GetSpriteColorOfType(Sleber* app, int x, int y, uint8_t type) {
 	return GetAreaColorOfTypeInt(app, cx, cy, cw, ch, type);
 }
 
-static void SetPixelAtInt(uint8_t *pixels, uint8_t *pixels_info, int stride, int x, int y, uint8_t value, uint8_t type) {
-	if ((pixels[y * stride + x] != value || pixels_info[y * stride + x] != type) && sNumChangeActions < MAX_CHANGE_ACTIONS) {
-		sChangeActionPos[sNumChangeActions] = ToI16Vec2(x, y);
-		sChangeActionSize[sNumChangeActions] = ToI16Vec2(1, 1);
-		sChangeMin.x = MIN(sChangeMin.x, (uint16_t)x);
-		sChangeMin.y = MIN(sChangeMin.y, (uint16_t)y);
-		sChangeMax.x = MAX(sChangeMax.x, (uint16_t)(x + 1));
-		sChangeMax.y = MAX(sChangeMax.y, (uint16_t)(y + 1));
-		++sNumChangeActions;
-	}
+static bool SetPixelAtInt(uint8_t* pixels, uint8_t* pixels_info, int stride, int x, int y, uint8_t value, uint8_t type) {
+	int offset = y * stride + x;
 
-	pixels[y * stride + x] = value;
-	pixels_info[y * stride + x] = type;
+	if ((pixels[offset] != value || pixels_info[offset] != type)) {
+		if (sNumChangeActions < MAX_CHANGE_ACTIONS) {
+			sChangeActionPos[sNumChangeActions] = ToI16Vec2(x, y);
+			sChangeActionSize[sNumChangeActions] = ToI16Vec2(1, 1);
+			sChangeMin.x = MIN(sChangeMin.x, (uint16_t)x);
+			sChangeMin.y = MIN(sChangeMin.y, (uint16_t)y);
+			sChangeMax.x = MAX(sChangeMax.x, (uint16_t)(x + 1));
+			sChangeMax.y = MAX(sChangeMax.y, (uint16_t)(y + 1));
+			++sNumChangeActions;
+		}
+		pixels[offset] = value;
+		pixels_info[offset] = type;
+		return true;
+	}
+	return false;
 }
 
 void HoverChar(Sleber* app, int x, int y) {
@@ -1166,21 +1172,26 @@ void HoverCharMC(Sleber* app, int x, int y) {
 	app->hover_foreground_color = fg == 0xff ? app->foreground_color : fg;
 }
 
-static void SetPixelAtMC(uint8_t *pixels, uint8_t *pixels_info, int stride, int x, int y, uint8_t value, uint8_t type) {
-	if ((pixels[y * stride + (x & ~1)] != value || pixels_info[y * stride + (x & ~1)] != type) && sNumChangeActions < MAX_CHANGE_ACTIONS) {
-		sChangeActionPos[sNumChangeActions] = ToI16Vec2(x & ~1, y);
-		sChangeActionSize[sNumChangeActions] = ToI16Vec2(2, 1);
-		sChangeMin.x = MIN(sChangeMin.x, (uint16_t)(x & ~1));
-		sChangeMin.y = MIN(sChangeMin.y, (uint16_t)y);
-		sChangeMax.x = MAX(sChangeMax.x, (uint16_t)(x + 2));
-		sChangeMax.y = MAX(sChangeMax.y, (uint16_t)(y + 1));
-		++sNumChangeActions;
-	}
+static bool SetPixelAtMC(uint8_t *pixels, uint8_t *pixels_info, int stride, int x, int y, uint8_t value, uint8_t type) {
+	int offset = y * stride + (x & ~1);
+	if (pixels[offset] != value || pixels_info[offset] != type) {
+		if (sNumChangeActions < MAX_CHANGE_ACTIONS) {
+			sChangeActionPos[sNumChangeActions] = ToI16Vec2(x & ~1, y);
+			sChangeActionSize[sNumChangeActions] = ToI16Vec2(2, 1);
+			sChangeMin.x = MIN(sChangeMin.x, (uint16_t)(x & ~1));
+			sChangeMin.y = MIN(sChangeMin.y, (uint16_t)y);
+			sChangeMax.x = MAX(sChangeMax.x, (uint16_t)(x + 2));
+			sChangeMax.y = MAX(sChangeMax.y, (uint16_t)(y + 1));
+			++sNumChangeActions;
+		}
 
-	pixels[y * stride + (x & ~1)] = value;
-	pixels[y * stride + (x | 1)] = value;
-	pixels_info[y * stride + (x & ~1)] = type;
-	pixels_info[y * stride + (x | 1)] = type;
+		pixels[y * stride + (x & ~1)] = value;
+		pixels[y * stride + (x | 1)] = value;
+		pixels_info[y * stride + (x & ~1)] = type;
+		pixels_info[y * stride + (x | 1)] = type;
+		return true;
+	}
+	return false;
 }
 
 // check the rules to apply pixel to char mode
@@ -1193,10 +1204,10 @@ static void SetPixelAtChar(Sleber* app, int x, int y, uint8_t value) {
 	uint8_t bg = app->shared_colors[0];
 	if (value == bg) {
 		// record undo previous color / type
-		SetPixelAtInt(app->pixels, app->pixels_info, app->width, x, y, value, GPX_PIXEL_BG);
+		app->pixels_changed |= SetPixelAtInt(app->pixels, app->pixels_info, app->width, x, y, value, GPX_PIXEL_BG);
 	} else {
 		// record undo either fg pixel or whole char
-		SetPixelAtInt(app->pixels, app->pixels_info, app->width, x, y, value, GPX_PIXEL_FG);
+		app->pixels_changed |= SetPixelAtInt(app->pixels, app->pixels_info, app->width, x, y, value, GPX_PIXEL_FG);
 		ChangeTypedColor(app, value, GPX_PIXEL_FG, x & ~7, y & ~7, 8, 8);
 	}
 }
@@ -1212,16 +1223,16 @@ static void SetPixelAtCharMC(Sleber* app, int x, int y, uint8_t value) {
 
 	if (value == app->shared_colors[0]) {
 		// record undo previous color / type
-		SetPixelAtMC(app->pixels, app->pixels_info, app->width, x, y, value, GPX_PIXEL_BG);
+		app->pixels_changed |= SetPixelAtMC(app->pixels, app->pixels_info, app->width, x, y, value, GPX_PIXEL_BG);
 	} else if (value == app->shared_colors[1]) {
 		// record undo previous color / type
-		SetPixelAtMC(app->pixels, app->pixels_info, app->width, x, y, value, GPX_PIXEL_MC0);
+		app->pixels_changed |= SetPixelAtMC(app->pixels, app->pixels_info, app->width, x, y, value, GPX_PIXEL_MC0);
 	} else if (value == app->shared_colors[2]) {
 		// record undo previous color / type
-		SetPixelAtMC(app->pixels, app->pixels_info, app->width, x, y, value, GPX_PIXEL_MC1);
+		app->pixels_changed |= SetPixelAtMC(app->pixels, app->pixels_info, app->width, x, y, value, GPX_PIXEL_MC1);
 	} else {
 		// record undo either fg pixel or whole char
-		SetPixelAtMC(app->pixels, app->pixels_info, app->width, x, y, value, GPX_PIXEL_FG);
+		app->pixels_changed |= SetPixelAtMC(app->pixels, app->pixels_info, app->width, x, y, value, GPX_PIXEL_FG);
 		ChangeTypedColor(app, value, GPX_PIXEL_FG, x & ~7, y & ~7, 8, 8);
 	}
 }
@@ -1274,16 +1285,16 @@ static void SetPixelAtCharMixed(Sleber* app, int x, int y, uint8_t value) {
 	if ((value < 8 || value == bg) && (c.fg == 0xff || !is_mc) && c.m0 == 0xff && c.m1 == 0xff) {
 		if (value == bg) {
 			// record undo previous color / type
-			SetPixelAtInt(app->pixels, app->pixels_info, app->width, x, y, value, GPX_PIXEL_BG);
+			app->pixels_changed |= SetPixelAtInt(app->pixels, app->pixels_info, app->width, x, y, value, GPX_PIXEL_BG);
 		} else {
 			// record undo either fg pixel or whole char
-			SetPixelAtInt(app->pixels, app->pixels_info, app->width, x, y, value, GPX_PIXEL_FG);
+			app->pixels_changed |= SetPixelAtInt(app->pixels, app->pixels_info, app->width, x, y, value, GPX_PIXEL_FG);
 			ChangeTypedColor(app, value, GPX_PIXEL_FG, x & ~7, y & ~7, 8, 8);
 		}
 	} else {
 		if (value == bg) {
 			// record undo previous color / type
-			SetPixelAtMC(app->pixels, app->pixels_info, app->width, x, y, value, GPX_PIXEL_BG);
+			app->pixels_changed |= SetPixelAtMC(app->pixels, app->pixels_info, app->width, x, y, value, GPX_PIXEL_BG);
 			UpdateCharMixedMC(app, x, y);
 		} else if (value == app->shared_colors[1]) {
 			// record undo previous color / type

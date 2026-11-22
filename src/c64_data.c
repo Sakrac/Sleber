@@ -50,7 +50,7 @@ int CountC64Chars(const uint8_t* types, int width, int height, int stride) {
 					b |= (*row++ & 1) << (7 - px);
 				}
 				current.bytes[py] = b;
-				row += stride;
+				row += stride - 8;
 			}
 			t += 8;
 			bool match = false;

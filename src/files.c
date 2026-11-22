@@ -10,6 +10,7 @@
 #include "palette.h"
 #include "convert.h"
 #include "sbx_file.h"
+#include "c64_data.h"
 
 // FILE OPS
 
@@ -162,6 +163,9 @@ int ImportImageFile(Sleber* app, const char* path_utf8) {
 		stbi_image_free(image);
 		UpdateStatus(app, "Unable to import image into the current screen mode.");
 		return 0;
+	}
+	if (app->screen_mode == SCREEN_MODE_CHAR || app->screen_mode == SCREEN_MODE_CHAR_MIXED || app->screen_mode == SCREEN_MODE_CHAR_MULTICOLOR) {
+		app->char_count = CountC64Chars(app->pixels_info, app->width, app->height, app->width);
 	}
 
 	stbi_image_free(image);
@@ -335,6 +339,9 @@ int OpenGpxFile(Sleber* app, const char* path_utf8) {
 	app->shared_colors[1] = parsed->multicolor0;
 	app->shared_colors[2] = parsed->multicolor1;
 	SetScreenModeLocked(app, target_mode);
+	if (app->screen_mode == SCREEN_MODE_CHAR || app->screen_mode == SCREEN_MODE_CHAR_MIXED || app->screen_mode == SCREEN_MODE_CHAR_MULTICOLOR) {
+		app->char_count = CountC64Chars(app->pixels_info, app->width, app->height, app->width);
+	}
 	free(old_pixels);
 	free(old_pixels_info);
 	free(old_pixels_prev);

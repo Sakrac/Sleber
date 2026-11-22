@@ -1047,7 +1047,10 @@ static LRESULT CALLBACK MainWndProc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM l
 			break;
 		case WM_TIMER:
 		{
-//			InvalidateRect(hwnd, NULL, TRUE); // Invalidate the entire client area
+			if (app->recount_triggerd) {
+				app->recount_triggerd = false;
+				app->request_recount = true;
+			}
 			break;
 		}
 		case WM_ERASEBKGND:
@@ -1751,6 +1754,16 @@ static void BuildMenuBar(Sleber *app) {
 	AppendMenuW(menubar, MF_POPUP, (UINT_PTR)help_menu, L"Help");
 
 	SetMenu(window, menubar);
+}
+
+void StartRecountCountdown(Sleber* app, int milliseconds) {
+	SetTimer(app->gui->window, 1, milliseconds, NULL);
+}
+
+void StopRecountCountdown(Sleber* app) {
+	if (app && app->gui && app->gui->window) {
+		KillTimer(app->gui->window, 1);
+	}
 }
 
 static void BuildPaletteWindow(Sleber* app, HINSTANCE instance) {

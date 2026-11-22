@@ -111,6 +111,8 @@ void OpenColorPickerAt(Sleber* app, const I32Point sp);
 void InvalidateDraw(Sleber *app, Area area);
 void InvalidatePalette(Sleber *app, Area area);
 void InvalidateColorPicker(Sleber* app);
+void StartRecountCountdown(Sleber* app, int milliseconds);
+void StopRecountCountdown(Sleber* app);
 
 #ifdef DEBUG
 static inline void DebugLog(const char* format, ...) {
