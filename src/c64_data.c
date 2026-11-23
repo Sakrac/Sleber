@@ -16,7 +16,7 @@ typedef struct {
 } C64CharData;
 
 CharColors C64CharColor(const uint8_t* pixels, const uint8_t* types, int stride) {
-	CharColors charColors = {-1, -1, -1, -1};
+	CharColors charColors = {{-1, -1, -1, -1}};
 	for(int y = 0; y < 8; y++) {
 		for(int x = 0; x < 8; x++) {
 			uint8_t type = *types++;
