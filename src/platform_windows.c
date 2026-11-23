@@ -1046,13 +1046,11 @@ static LRESULT CALLBACK MainWndProc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM l
 			}
 			break;
 		case WM_TIMER:
-		{
 			if (app->recount_triggerd) {
 				app->recount_triggerd = false;
-				app->request_recount = true;
+				RequestRecount(app);
 			}
 			break;
-		}
 		case WM_ERASEBKGND:
 			return 1; /* WM_PAINT below always fills the whole canvas area */
 		case WM_PAINT:

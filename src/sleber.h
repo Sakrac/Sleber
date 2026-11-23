@@ -127,6 +127,8 @@ typedef struct Sleber {
 	uint8_t *pixels_info; // pixel type
 	uint8_t *pixels_prev;
 
+	char* current_file_path;
+
 	uint8_t *brush;
 	uint32_t *brush32; // to handle pasted bitmaps from other programs
 
@@ -173,8 +175,7 @@ typedef struct Sleber {
 	uint8_t hover_multicolor1;
 
 	uint8_t screen_mode;
-	char *current_file_path;
-	SleberFileType current_file_type;
+	uint8_t current_file_type;
 
 	// user painting colors
     uint8_t foreground_color;
@@ -263,6 +264,7 @@ void RequestRedrawPalette(Sleber* app);
 void RequestRedrawPaletteColors(Sleber* app, uint16_t colors);
 void RequestRedrawColorPicker(Sleber* app);
 void RequestRedraw(Sleber* app);
+void RequestRecount(Sleber* app);
 void RequestRedrawArea(Sleber* app, const Area area);
 void RequestRedrawCanvasWindow(Sleber* app, const Area area);
 void StartRedrawThread(Sleber* app);

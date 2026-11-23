@@ -506,10 +506,10 @@ static void DrawBitmap(Sleber* app, UIPixel* pixels, int width, int height, Area
 	const int y0 = Clamp(app->offset_y, target_y, trgend_y);
 	const int x1 = Clamp(app->offset_x + app->width * step, target_x, trgend_x);
 	const int y1 = Clamp(app->offset_y + app->height * step, target_y, trgend_y);
-	const int xm = app->width << 16;
+	const int xm = app->width << 16, ym = app->height << 16;
 	int src_y = source_y;
 	for(int y = y0; y < y1; ++y) {
-		if ((src_y >> 16) >= app->height) { break; }
+		if (src_y >= ym) { break; }
 		const uint8_t* src = p + (src_y >> 16) * app->width;
 		UIPixel* row = pixels + y * width;
 		int src_x = source_x;
@@ -870,8 +870,9 @@ static ThreadReturn RedrawThreadFunc(ThreadArg arg) {
 				if (app->pixels_changed) {
 					app->pixels_changed = false;
 					if (!app->recount_triggerd) {
-						app->recount_triggerd = true;
-						if (app->screen_mode == SCREEN_MODE_CHAR || app->screen_mode == SCREEN_MODE_CHAR_MIXED || app->screen_mode == SCREEN_MODE_CHAR_MULTICOLOR) {
+						if (app->screen_mode == SCREEN_MODE_CHAR || app->screen_mode == SCREEN_MODE_CHAR_MIXED ||
+							app->screen_mode == SCREEN_MODE_CHAR_MULTICOLOR || app->screen_mode == SCREEN_MODE_ECBM) {
+							app->recount_triggerd = true;
 							StartRecountCountdown(app, 1000);
 						}
 					}
@@ -885,7 +886,8 @@ static ThreadReturn RedrawThreadFunc(ThreadArg arg) {
 		}
 		if (app->request_recount) {
 			app->request_recount = false;
-			if (app->screen_mode == SCREEN_MODE_CHAR || app->screen_mode == SCREEN_MODE_CHAR_MIXED || app->screen_mode == SCREEN_MODE_CHAR_MULTICOLOR) {
+			if (app->screen_mode == SCREEN_MODE_CHAR || app->screen_mode == SCREEN_MODE_CHAR_MIXED ||
+				app->screen_mode == SCREEN_MODE_CHAR_MULTICOLOR || app->screen_mode == SCREEN_MODE_ECBM) {
 				LockMutex(&app->canvas_mutex);
 				app->char_count = CountC64Chars(app->pixels_info, app->width, app->height, app->width);
 				UnlockMutex(&app->canvas_mutex);
@@ -1578,7 +1580,8 @@ void UpdateHover(Sleber* app, int px, int py) {
 
 	if (p.x != app->hover_x || p.y != app->hover_y) {
 		char message[256];
-		if (app->screen_mode == SCREEN_MODE_CHAR || app->screen_mode == SCREEN_MODE_CHAR_MULTICOLOR || app->screen_mode == SCREEN_MODE_CHAR_MIXED) {
+		if (app->screen_mode == SCREEN_MODE_CHAR || app->screen_mode == SCREEN_MODE_CHAR_MULTICOLOR ||
+			app->screen_mode == SCREEN_MODE_CHAR_MIXED || app->screen_mode == SCREEN_MODE_ECBM) {
 			snprintf(message, sizeof(message), "X: %d Y:%d XC: %d YC: %d Chars: %d Zoom: %d%%",
 				p.x, p.y, p.x / 8, p.y / 8, app->char_count, PixelSize(app) * 100);
 		} else {

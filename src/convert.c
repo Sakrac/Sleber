@@ -776,7 +776,7 @@ static bool ConvertToCharECBM(Sleber* app, uint8_t* image, int image_width, int 
 	DebugLog("Converting image to char: %dx%d, channels: %d", image_width, image_height, image_channels);
 	// pick the background color
 	uint8_t bg[ECBM_BACKGROUND_COUNT] = { 0, 1, 2, 3 };
-	if (!app->keep_import_background_colors) {
+	if (app->keep_import_background_colors) {
 		for(int i = 0; i < ECBM_BACKGROUND_COUNT; ++i) {
 			bg[i] = app->shared_colors[i];
 		}

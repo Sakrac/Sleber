@@ -186,7 +186,8 @@ bool LoadSbxFile(Sleber* app, const char* path_utf8) {
 	app->pixels_info = pixels_info;
 	if (app->pixels_prev) free(app->pixels_prev);
 	app->pixels_prev = pixels_prev;
-	if (app->screen_mode == SCREEN_MODE_CHAR || app->screen_mode == SCREEN_MODE_CHAR_MIXED || app->screen_mode == SCREEN_MODE_CHAR_MULTICOLOR) {
+	if (app->screen_mode == SCREEN_MODE_CHAR || app->screen_mode == SCREEN_MODE_CHAR_MIXED ||
+		app->screen_mode == SCREEN_MODE_CHAR_MULTICOLOR || app->screen_mode == SCREEN_MODE_ECBM) {
 		app->char_count = CountC64Chars(app->pixels_info, app->width, app->height, app->width);
 	}
 

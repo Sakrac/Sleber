@@ -164,7 +164,8 @@ int ImportImageFile(Sleber* app, const char* path_utf8) {
 		UpdateStatus(app, "Unable to import image into the current screen mode.");
 		return 0;
 	}
-	if (app->screen_mode == SCREEN_MODE_CHAR || app->screen_mode == SCREEN_MODE_CHAR_MIXED || app->screen_mode == SCREEN_MODE_CHAR_MULTICOLOR) {
+	if (app->screen_mode == SCREEN_MODE_CHAR || app->screen_mode == SCREEN_MODE_CHAR_MIXED ||
+		app->screen_mode == SCREEN_MODE_CHAR_MULTICOLOR || app->screen_mode == SCREEN_MODE_ECBM) {
 		app->char_count = CountC64Chars(app->pixels_info, app->width, app->height, app->width);
 	}
 
@@ -339,7 +340,8 @@ int OpenGpxFile(Sleber* app, const char* path_utf8) {
 	app->shared_colors[1] = parsed->multicolor0;
 	app->shared_colors[2] = parsed->multicolor1;
 	SetScreenModeLocked(app, target_mode);
-	if (app->screen_mode == SCREEN_MODE_CHAR || app->screen_mode == SCREEN_MODE_CHAR_MIXED || app->screen_mode == SCREEN_MODE_CHAR_MULTICOLOR) {
+	if (app->screen_mode == SCREEN_MODE_CHAR || app->screen_mode == SCREEN_MODE_CHAR_MIXED ||
+		app->screen_mode == SCREEN_MODE_CHAR_MULTICOLOR || app->screen_mode == SCREEN_MODE_ECBM) {
 		app->char_count = CountC64Chars(app->pixels_info, app->width, app->height, app->width);
 	}
 	free(old_pixels);
