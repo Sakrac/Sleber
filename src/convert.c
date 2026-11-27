@@ -772,32 +772,98 @@ static bool ConvertToBitmapMC(Sleber* app, uint8_t* image, int image_width, int 
 	return false;
 }
 
+static int64_t GetHistogramErrorColors(uint8_t col1, uint8_t col2, const uint16_t* histogram) {
+	int64_t total = 0;
+	for (int i = 0; i < COLOR_COUNT; ++i) {
+		if (histogram[i]) {
+			int64_t d1 = ColorDistance(col1, i);
+			int64_t d2 = ColorDistance(col2, i);
+			if (d1 < 0 || d2 < 0) {
+				__debugbreak();
+			}
+			total += (d1 < d2 ? d1 : d2) * histogram[i];
+		}
+	}
+	return total;
+}
+
+
 static bool ConvertToCharECBM(Sleber* app, uint8_t* image, int image_width, int image_height, int image_channels) {
 	DebugLog("Converting image to char: %dx%d, channels: %d", image_width, image_height, image_channels);
-	// pick the background color
+
 	uint8_t bg[ECBM_BACKGROUND_COUNT] = { 0, 1, 2, 3 };
 	if (app->keep_import_background_colors) {
 		for(int i = 0; i < ECBM_BACKGROUND_COUNT; ++i) {
 			bg[i] = app->shared_colors[i];
 		}
 	} else {
-		uint32_t col_count[COLOR_COUNT] = { 0 };
-		TwoColorWeightedCount(image_height, image_width, image, image_channels, col_count);
+			// pick the background colors
+		int char_width = (image_width + 7) / 8;
+		int char_height = (image_height + 7) / 8;
+		int char_count = char_width * char_height;
+		uint16_t* char_col_count = (uint16_t*)calloc(char_width * char_height, COLOR_COUNT * sizeof(uint16_t));
+		uint16_t* curr_col_count = char_col_count;
 
-		uint32_t most[ECBM_BACKGROUND_COUNT] = { 0, 0, 0, 0 };
-		for (uint8_t i = 0; i < COLOR_COUNT; ++i) {
-			for (int j = 0; j < ECBM_BACKGROUND_COUNT; ++j) {
-				if (col_count[i] > most[j]) {
-					for (int k = ECBM_BACKGROUND_COUNT - 1; k > j; --k) {
-						most[k] = most[k - 1];
-						bg[k] = bg[k - 1];
+		for (int cy = 0; cy < image_height; cy += 8) {
+			int ch = (cy + 8) < image_height ? 8 : (image_height - cy);
+			for (int cx = 0; cx < image_width; cx += 8) {
+				int cw = (cx + 8) < image_width ? 8 : (image_width - cx);
+				const uint8_t* p = image + (image_width * cy + cx) * image_channels;
+				for (int y = 0; y < ch; ++y) {
+					for (int x = 0; x < cw; ++x) {
+						uint8_t col = GetClosestPaletteColor(p[0], p[1], p[2]);
+						curr_col_count[col & 0xf]++;
+						p += image_channels;
 					}
-					most[j] = col_count[i];
-					bg[j] = i;
+					p += (image_width - cw) * image_channels;
+				}
+				curr_col_count += COLOR_COUNT;
+			}
+		}
+
+		int8_t check[] = { 0, 1, 2, 3 };
+		int8_t best[4] = { 0, 0, 0, 0 };
+		int64_t best_error = INT64_MAX;
+		for (;;) {
+			int64_t total = 0;
+			const uint16_t* curr = char_col_count;
+			for (int c = 0; c < char_count; ++c) {
+				int64_t distMin = INT64_MAX;
+				for (int i = 0; i < 4; ++i) {
+					uint8_t c1 = check[i];
+					for (uint8_t c2 = 0; c2 < 16; ++c2) {
+						if (c2 != c1) {
+							int64_t dist = GetHistogramErrorColors(c1, c2, curr);
+							if (dist < distMin) { distMin = dist; }
+						}
+					}
+				}
+				total += distMin;
+				curr += COLOR_COUNT;
+			}
+
+			if (total < best_error) {
+				best_error = total;
+				memcpy(best, check, sizeof(uint8_t) * 4);
+			}
+
+			int8_t p = -1;
+			for (int i = 0; i < 4; ++i) {
+				int8_t n = i < 3 ? check[i + 1] : 0x10;
+				int8_t c = check[i];
+				if ((c + 1) == n) {
+					check[i] = p + 1;
+					p = c;
+				}
+				else {
+					check[i] = c + 1;
 					break;
 				}
 			}
+			if (check[0] == 0xc) { break; }
 		}
+		free(char_col_count);
+		for (int i = 0; i < 4; ++i) { bg[i] = best[i]; }
 	}
 	int dither_level = app->import_image_dither;
 

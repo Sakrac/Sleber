@@ -8,7 +8,7 @@
   <Identity
     Name="SpaceMoguls.Sleber"
     Publisher="CN=FB5EB715-A1AF-42FC-AE67-8AFF4A56DCD2"
-    Version="1.0.2.0"
+    Version="1.0.3.0"
     ProcessorArchitecture="x64" />
 
   <Properties>
